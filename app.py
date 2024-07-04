@@ -1,67 +1,104 @@
 import chainlit as cl
-import openai
-import os
+from chainlit import make_async
+from chainlit.input_widget import Slider, Select, Switch
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-model_name = "gpt-3.5-turbo"
-settings = {
-    "temperature": 0.7,
-    "max_tokens": 500,
-    "top_p": 1,
-    "frequency_penalty": 0,
-    "presence_penalty": 0,
-}
+from model import agent_executor
+
+
+@cl.author_rename
+def rename(orig_author: str):
+    rename_dict = {"LLMChain": "Albert Einstein", "Chatbot": "Flipify"}
+    return rename_dict.get(orig_author, orig_author)
+
+
+def my_sync_function(message):
+    res = agent_executor.run(message)
+    return res
+
 
 @cl.on_chat_start
-def start_chat():
-    cl.user_session.set(
-        "message_history",
-        [{"role": "system", "content": "You are a helpful clothing assistant."}],
-    )
-
-@cl.on_chat_start    
 async def start():
-    # Send the elements globally
-    await cl.Image(path="./cat.jpg", name="image1", display="inline").send()
-    # await cl.Text(content="Here is a side text document", name="text1", display="side").send()
-    # await cl.Text(content="Here is a page text document", name="text2", display="page").send()
-
-    # Send the same message twice
-    content = "Here is image1, a nice image of a cat! As well as text1 and text2!"
-
-    await cl.Message(
-        content=content,
+    content = "Hii, I am Flipify. Your personal AI"
+    infos = cl.user_session.get("user_infos")
+    await cl.Avatar(
+        name="Deepu Singla",
+        url="https://cdn-icons-png.flaticon.com/512/9313/9313209.png",
+        content="Deepu Singla"
     ).send()
+    await cl.Avatar(
+        name="Flipify",
+        url="https://logos-world.net/wp-content/uploads/2020/11/Flipkart-Emblem.png",
+    ).send()
+    settings = await cl.ChatSettings(
+        [
+            Select(
+                id="Model",
+                label="OpenAI - Model",
+                values=["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-32k"],
+                initial_index=0,
+            ),
+            Switch(id="Streaming", label="OpenAI - Stream Tokens", initial=True),
+            Slider(
+                id="Temperature",
+                label="OpenAI - Temperature",
+                initial=1,
+                min=0,
+                max=2,
+                step=0.1,
+            ),
+            Slider(
+                id="SAI_Steps",
+                label="Stability AI - Steps",
+                initial=30,
+                min=10,
+                max=150,
+                step=1,
+                description="Amount of inference steps performed on image generation.",
+            ),
+            Slider(
+                id="SAI_Cfg_Scale",
+                label="Stability AI - Cfg_Scale",
+                initial=7,
+                min=1,
+                max=35,
+                step=0.1,
+                description="Influences how strongly your generation is guided to match your prompt.",
+            ),
+            Slider(
+                id="SAI_Width",
+                label="Stability AI - Image Width",
+                initial=512,
+                min=256,
+                max=2048,
+                step=64,
+                tooltip="Measured in pixels",
+            ),
+            Slider(
+                id="SAI_Height",
+                label="Stability AI - Image Height",
+                initial=512,
+                min=256,
+                max=2048,
+                step=64,
+                tooltip="Measured in pixels",
+            ),
+        ]
+    ).send()
+
+    # #
+    # await cl.Message(
+    #     content=content,
+    # ).send()
+
+
+@cl.on_settings_update
+async def setup_agent(settings):
+    print("on_settings_update", settings)
 
 
 @cl.on_message
-async def main(message: cl.Message):
-    message_history = cl.user_session.get("message_history")
-    message_history.append({"role": "user", "content": message.content})
-
-    msg = cl.Message(content="")
-
-    async for stream_resp in await openai.ChatCompletion.acreate(
-        model=model_name, 
-        messages=message_history, 
-        stream=True, 
-        **settings
-    ):
-        token = stream_resp.choices[0]["delta"].get("content", "")
-        await msg.stream_token(token)
-
-    message_history.append({"role": "assistant", "content": msg.content})
-    user_message = message_history[-2].content.lower()
-    
-    if "clothing" in user_message or "dress" in user_message:
-        clothing_suggestions = generate_clothing_suggestions(user_message)
-        msg.content = clothing_suggestions
-    await msg.send()
-
-def generate_clothing_suggestions(user_message):
-    if "summer" in user_message:
-        suggestions = [
-            "1. Floral sundress",
-            "2. Linen shorts and a tank top",
-            "3. Beach-ready swimwear",
-        ]
+async def main(message: str):
+    async_function = make_async(my_sync_function)
+    result = await async_function(message)
+    print(result)
+    await cl.Message(content=result).send()
