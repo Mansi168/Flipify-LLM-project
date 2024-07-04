@@ -2,6 +2,9 @@
 
 Flipify is a chatbot designed to provide users with fashion suggestions, product combinations, and fashion-related products available on Flipkart. This README provides an overview of the Flipify Chatbot project, its features, setup instructions, and usage guidelines.
 
+## Demo Video
+https://drive.google.com/file/d/1HpNtm1Wf-euqZOqMWFLw_GtOP40p0MKR/view
+
 ## Features
 
 Flipify comes equipped with the following features:
